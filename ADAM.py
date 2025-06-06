@@ -7,7 +7,6 @@ import math as m
 from PIL import Image
 import os
 from glob import glob
-import matplotlib.pyplot as plt
 
 
 
@@ -139,123 +138,6 @@ sigma_a = (Sigma_VM_Pipe_Max_Operating_Pressure - Sigma_VM_Pipe_Min_Operating_Pr
 sigma_m = (Sigma_VM_Pipe_Max_Operating_Pressure + Sigma_VM_Pipe_Min_Operating_Pressure) / 2
 Se = 0.5 * UTS  # Assumed endurance limit
 sigma_f = (UTS + 345 )# Assumed Fatique Strength Coefficient
-# Goodman Criterion PART 2 Experiment
-Goodman_Value = (sigma_a / Se) + (sigma_m / UTS)
-Goodman_Safe = Goodman_Value <= 1
-
-# Soderberg Criterion
-Soderberg_Value = (sigma_a / Se) + (sigma_m / Sy)
-Soderberg_Safe = Soderberg_Value <= 1
-
-# Gerber Criterion
-Gerber_Value = (sigma_a / Se) + ((sigma_m / UTS) ** 2)
-Gerber_Safe = Gerber_Value <= 1
-
-# Morrow Criterion (more accurate for mean stress effect at high strains)
-# Morrow equation: σa = Se*(1 - σm/σf)
-Morrow_sigma_a_allow = Se * (1 - sigma_m / sigma_f)
-Morrow_Value = (sigma_a / Se) +  ( sigma_m / sigma_f )
-Morrow_Safe = sigma_a <= Morrow_sigma_a_allow
-
-fig, ax = plt.subplots(figsize=(8, 6))
-
-#Calculate points for Goodman and Soderberg lines
-x_goodman = np.linspace(0, UTS, 100)
-y_goodman = Se * (1 - x_goodman/UTS)
-
-x_soderberg = np.linspace(0, Sy, 100)
-y_soderberg = Se * (1 - x_soderberg/Sy)
-
-# Plot Goodman and Soderberg lines
-ax.plot(x_goodman, y_goodman, 'b-', label='Goodman Line')
-ax.plot(x_soderberg, y_soderberg, 'r-', label='Soderberg Line')
-
-# Plot operating stress point
-ax.plot([sigma_m, sigma_m], [0, sigma_a], 'k--', linewidth=1)
-ax.plot([0, sigma_m], [sigma_a, sigma_a], 'k--', linewidth=1)
-ax.scatter(sigma_m, sigma_a, color='purple', s=100, 
-           label=f'Operating Point (σm={sigma_m:.1f}, σa={sigma_a:.1f})')
-
-# Mark key points
-ax.scatter(0, Se, color='green', s=100, label=f'Se = {Se:.1f} MPa')
-ax.scatter(UTS, 0, color='blue', s=100, label=f'UTS = {UTS:.1f} MPa')
-ax.scatter(Sy, 0, color='red', s=100, label=f'Sy = {Sy:.1f} MPa')
-
-# Set up axes
-max_value = max(Sy, UTS, Se, sigma_m*1.5, sigma_a*1.5)
-ax.set_xlim(0, max_value)
-ax.set_ylim(0, max_value)
-ax.set_xlabel('Mean Stress (σm) [MPa]', fontsize=12)
-ax.set_ylabel('Alternating Stress (σa) [MPa]', fontsize=12)
-ax.set_title('Goodman Diagram for Fatigue Assessment', fontsize=14)
-
-# Add grid and legend
-ax.grid(True, linestyle=':', alpha=0.7)
-ax.legend(fontsize=10)
-ax.set_aspect('equal')
-
-# Display the plot in Streamlit
-st.pyplot(fig)
-# Display stress parameters first
-calculated_param = {
-    'Alternating Stress, sa (MPa)': "{:.2f}".format(sigma_a),
-    'Mean Stress, sm (MPa)': "{:.2f}".format(sigma_m),
-    'Endurance Limit, Se (MPa)': "{:.2f}".format(Se)
-}
-calculated_param_df = pd.DataFrame(calculated_param, index=[0])
-st.subheader('Fatigue Stress Parameters')
-st.write(calculated_param_df)
-
-# Display Goodman result
-calculated_param = {
-    'Goodman Value': "{:.3f}".format(Goodman_Value)
-}
-calculated_param_df = pd.DataFrame(calculated_param, index=[0])
-st.subheader('Calculated Corroded Pipe Burst Pressure via Goodman')
-st.write(calculated_param_df)
-
-# Display Soderberg result
-calculated_param = {
-    'Soderberg Value': "{:.3f}".format(Soderberg_Value)
-}
-calculated_param_df = pd.DataFrame(calculated_param, index=[0])
-st.subheader('Calculated Corroded Pipe Burst Pressure via Soderberg')
-st.write(calculated_param_df)
-
-# Display Gerber result
-calculated_param = {
-    'Gerber Value': "{:.3f}".format(Gerber_Value)
-}
-calculated_param_df = pd.DataFrame(calculated_param, index=[0])
-st.subheader('Calculated Corroded Pipe Burst Pressure via Gerber')
-st.write(calculated_param_df)
-
-calculated_param = {
-    'Allowable σₐ (Morrow) (MPa)': "{:.2f}".format(Morrow_sigma_a_allow)
-}
-calculated_param_df = pd.DataFrame(calculated_param, index=[0])
-st.subheader('Fatigue Failure Assessment: Morrow')
-st.write(calculated_param_df)
-
-
-calculated_param={'Sigma_VM_Pipe_Max_Operating_Pressure (MPa)': "{:.2f}".format(Sigma_VM_Pipe_Max_Operating_Pressure)}
-calculated_param_df=pd.DataFrame(calculated_param, index=[0])
-st.subheader('Von Mises stress of Maximum Operating Pressure')
-st.write(calculated_param_df)
-
-calculated_param={'Sigma_VM_Pipe_Min_Operating_Pressure (MPa)': "{:.2f}".format(Sigma_VM_Pipe_Min_Operating_Pressure)}
-calculated_param_df=pd.DataFrame(calculated_param, index=[0])
-st.subheader('Von Mises stress of Minimum Operating Pressure')
-st.write(calculated_param_df)
-
-#Stresses = [Sigma_VM_Pipe_Max_Operating_Pressure, Sigma_VM_Pipe_Min_Operating_Pressure, Sy, UTS]
-#index = ["Svm_Max (MPa)", "Svm_Min (MPa)", "Yield Stress (MPa)", "UTS (MPa)"]
-Stresses = [Sigma_VM_Pipe_Max_Operating_Pressure, Sigma_VM_Pipe_Min_Operating_Pressure, sigma_a, sigma_m, Se, Sy, UTS]
-index = ["Svm_Max (MPa)", "Svm_Min (MPa)", "σa (MPa)", "σm (MPa)", "Se (MPa)", "Yield Stress (MPa)", "UTS (MPa)"]
-df = pd.DataFrame({"Stresses (MPa)": Stresses}, index=index)
-
-#st.pyplot(df.plot.barh(color={"Stresses (MPa)": "red"}, stacked=True).figure)
-
 
 st.subheader('Reference')
 st.write('Xian-Kui Zhu, A comparative study of burst failure models for assessing remaining strength of corroded pipelines, Journal of Pipeline Science and Engineering 1 (2021) 36 - 50, https://doi.org/10.1016/j.jpse.2021.01.008')
